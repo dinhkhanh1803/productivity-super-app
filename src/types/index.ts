@@ -86,6 +86,24 @@ export interface FocusSettings {
   soundEnabled: boolean;
 }
 
+export type BackgroundType = "image" | "video" | "color";
+
+export interface FocusBackground {
+  type: BackgroundType;
+  url: string;
+  opacity?: number;
+}
+
+export type TrackType = "local" | "online" | "preset";
+
+export interface Track {
+  id: string;
+  title: string;
+  url: string;
+  type: TrackType;
+  duration?: number;
+}
+
 /* ───── Notes ───── */
 export interface Note extends BaseEntity {
   title: string;
@@ -102,6 +120,37 @@ export interface User {
   email: string;
   avatar?: string;
   timezone: string;
+}
+
+/* ───── Goals ───── */
+export type GoalType = "short_term" | "long_term";
+export type GoalStatus = "active" | "completed";
+
+export interface Goal extends BaseEntity {
+  title: string;
+  description?: string;
+  type: GoalType;
+  status: GoalStatus;
+  targetDate: string;
+  progress: number; // 0-100
+}
+
+/* ───── Habits ───── */
+export type HabitFrequency = "daily" | "weekly";
+
+export interface Habit extends BaseEntity {
+  name: string;
+  icon: string;
+  frequency: HabitFrequency;
+  reminderTime?: string; // HH:mm
+  color?: string;
+  streak: number;
+}
+
+export interface HabitLog extends BaseEntity {
+  habitId: string;
+  date: string; // YYYY-MM-DD
+  completed: boolean;
 }
 
 /* ───── Navigation ───── */

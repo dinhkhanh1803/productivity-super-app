@@ -22,6 +22,8 @@ import { useFinanceStore } from "@/store/financeStore";
 import { useFocusStore } from "@/store/focusStore";
 import { useT } from "@/hooks/useT";
 import { formatCurrency } from "@/lib/utils";
+import { GoalsWidget } from "./GoalsWidget";
+import { HabitsWidget } from "./HabitsWidget";
 
 /* ─── Today Tasks card ──────────────────────────────────── */
 function TodayTasksCard() {
@@ -208,14 +210,20 @@ function FinanceCard() {
 
 export function QuickActionsSection() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
         <TodayTasksCard />
       </motion.div>
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.26 }}>
-        <StartStudyingCard />
+        <GoalsWidget />
       </motion.div>
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}>
+        <HabitsWidget />
+      </motion.div>
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}>
+        <StartStudyingCard />
+      </motion.div>
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.44 }}>
         <FinanceCard />
       </motion.div>
     </div>

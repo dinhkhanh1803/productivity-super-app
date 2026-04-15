@@ -12,6 +12,9 @@ import {
   Zap,
   CheckCircle,
   Clock,
+  Maximize,
+  Minimize,
+  Image as ImageIcon,
 } from "lucide-react";
 import { useFocusStore } from "@/store/focusStore";
 import type { FocusMode } from "@/types";
@@ -27,10 +30,16 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
-const modeConfig: Record<FocusMode, { label: string; icon: React.ElementType; color: string; ring: string }> = {
-  focus: { label: "Focus", icon: Brain, color: "from-[var(--primary)] to-[var(--accent)]", ring: "ring-[var(--primary)]" },
-  short_break: { label: "Short Break", icon: Coffee, color: "from-emerald-500 to-teal-500", ring: "ring-emerald-500" },
-  long_break: { label: "Long Break", icon: Zap, color: "from-orange-500 to-amber-500", ring: "ring-orange-500" },
+import { BackgroundRenderer } from "@/features/focus/components/BackgroundRenderer";
+import { MusicPlayer } from "@/features/focus/components/MusicPlayer";
+import { MusicControls } from "@/features/focus/components/MusicControls";
+import { PlaylistDrawer } from "@/features/focus/components/PlaylistDrawer";
+import { BackgroundSelector } from "@/features/focus/components/BackgroundSelector";
+
+const modeConfig: Record<FocusMode, { label: string; icon: React.ElementType }> = {
+  focus: { label: "Focus", icon: Brain },
+  short_break: { label: "Short Break", icon: Coffee },
+  long_break: { label: "Long Break", icon: Zap },
 };
 
 function formatTime(seconds: number): string {
@@ -47,15 +56,19 @@ export default function FocusPage() {
     timeLeft,
     isRunning,
     sessionCount,
+    isFullscreen,
     startTimer,
     pauseTimer,
     resetTimer,
     tick,
     switchMode,
     updateSettings,
+    toggleFullscreen,
   } = useFocusStore();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [playlistOpen, setPlaylistOpen] = useState(false);
+  const [bgSelectorOpen, setBgSelectorOpen] = useState(false);
   const [settingsForm, setSettingsForm] = useState(settings);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -79,29 +92,83 @@ export default function FocusPage() {
     return () => { document.title = "Productivity Super App"; };
   }, [timeLeft, isRunning, currentMode]);
 
-  const totalDuration = currentMode === "focus"
-    ? settings.focusDuration * 60
-    : currentMode === "short_break"
-    ? settings.shortBreakDuration * 60
-    : settings.longBreakDuration * 60;
+  // Fullscreen API Listeners
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isDocFullscreen = !!document.fullscreenElement;
+      if (isDocFullscreen !== isFullscreen) {
+        toggleFullscreen(isDocFullscreen);
+      }
+    };
 
-  const progress = ((totalDuration - timeLeft) / totalDuration) * 100;
-  const { color, ring, icon: ModeIcon } = modeConfig[currentMode];
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, [isFullscreen, toggleFullscreen]);
+
+  const handleToggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        }
+      }
+    } catch (err) {
+      console.error("Error attempting to handle fullscreen:", err);
+    }
+  };
 
   const todayStr = new Date().toISOString().split("T")[0];
   const todayFocusSessions = sessions.filter(
     (s) => s.mode === "focus" && s.completedAt?.startsWith(todayStr)
   );
 
-  const r = 120;
-  const circumference = 2 * Math.PI * r;
-  const strokeDashoffset = circumference - (progress / 100) * circumference;
-
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
-      {/* Mode selector */}
-      <div className="flex justify-center">
-        <div className="inline-flex rounded-xl border border-[var(--border)] bg-[var(--muted)] p-1 gap-1">
+    <div 
+      className={cn(
+        "relative h-full w-full flex flex-col items-center justify-center isolate p-6 overflow-hidden transition-all duration-500",
+        isFullscreen ? "m-0 rounded-none border-none" : "m-2 rounded-xl border border-white/10 shadow-sm"
+      )} 
+      style={!isFullscreen ? { minHeight: "calc(100vh - 4rem)" } : {}}
+    >
+      <BackgroundRenderer />
+      <MusicPlayer />
+      <PlaylistDrawer open={playlistOpen} onOpenChange={setPlaylistOpen} />
+      <BackgroundSelector open={bgSelectorOpen} onOpenChange={setBgSelectorOpen} />
+
+      {/* Top right corner utilities */}
+      <div className="absolute top-6 right-6 flex items-center gap-3 z-10">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="text-white hover:bg-white/20 rounded-full bg-black/20 backdrop-blur-md border border-white/10"
+          onClick={() => setBgSelectorOpen(true)}
+        >
+          <ImageIcon className="h-4 w-4" />
+        </Button>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="text-white hover:bg-white/20 rounded-full bg-black/20 backdrop-blur-md border border-white/10"
+          onClick={() => setSettingsOpen(true)}
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="text-white hover:bg-white/20 rounded-full bg-black/20 backdrop-blur-md border border-white/10 hidden sm:flex"
+          onClick={handleToggleFullscreen}
+        >
+          {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+        </Button>
+      </div>
+
+      {/* Main Timer Area */}
+      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-2xl mt-[-5vh]">
+        {/* Mode selector */}
+        <div className="mb-10 inline-flex rounded-2xl border border-white/20 bg-black/20 backdrop-blur-md p-1.5 gap-2 shadow-2xl">
           {(Object.entries(modeConfig) as [FocusMode, typeof modeConfig[FocusMode]][]).map(([mode, cfg]) => {
             const Icon = cfg.icon;
             return (
@@ -109,202 +176,124 @@ export default function FocusPage() {
                 key={mode}
                 onClick={() => switchMode(mode)}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all",
+                  "flex items-center gap-2 px-4 py-2 text-sm font-bold transition-all rounded-xl",
                   currentMode === mode
-                    ? "bg-[var(--card)] shadow text-[var(--foreground)]"
-                    : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                    ? "bg-white text-black shadow-lg shadow-white/10 scale-105"
+                    : "text-white/70 hover:text-white hover:bg-white/10"
                 )}
-                id={`mode-${mode}`}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className="h-4 w-4" />
                 {cfg.label}
               </button>
             );
           })}
         </div>
-      </div>
 
-      {/* Timer circle */}
-      <div className="flex flex-col items-center">
-        <div className="relative flex items-center justify-center">
-          <svg width={280} height={280} className="rotate-[-90deg]">
-            {/* Background circle */}
-            <circle
-              cx={140}
-              cy={140}
-              r={r}
-              fill="none"
-              stroke="var(--border)"
-              strokeWidth={8}
-            />
-            {/* Progress circle */}
-            <motion.circle
-              cx={140}
-              cy={140}
-              r={r}
-              fill="none"
-              stroke="url(#timerGradient)"
-              strokeWidth={8}
-              strokeLinecap="round"
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-              transition={{ duration: 0.5 }}
-            />
-            <defs>
-              <linearGradient id="timerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="var(--primary)" />
-                <stop offset="100%" stopColor="var(--accent)" />
-              </linearGradient>
-            </defs>
-          </svg>
-
-          {/* Time display */}
-          <div className="absolute flex flex-col items-center">
-            <motion.span
-              key={formatTime(timeLeft)}
-              initial={{ scale: 0.95, opacity: 0.7 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="text-5xl font-bold tracking-tight tabular-nums text-[var(--foreground)]"
-            >
-              {formatTime(timeLeft)}
-            </motion.span>
-            <span className="text-sm text-[var(--muted-foreground)] mt-1 flex items-center gap-1">
-              <ModeIcon className="h-3.5 w-3.5" />
-              {modeConfig[currentMode].label}
-            </span>
-            <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-              Session {sessionCount + 1} of {settings.sessionsBeforeLongBreak}
-            </p>
+        {/* Timer Box */}
+        <div className="flex flex-col items-center text-white mb-16">
+          <motion.span
+            key={formatTime(timeLeft)}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-[80px] sm:text-[120px] font-bold tracking-tighter tabular-nums leading-none drop-shadow-2xl"
+          >
+            {formatTime(timeLeft)}
+          </motion.span>
+          
+          <div className="mt-4 text-white/70 font-medium uppercase tracking-[0.2em] flex items-center gap-3">
+            <span className="w-12 h-[1px] bg-white/20" />
+            Session {sessionCount + 1} / {settings.sessionsBeforeLongBreak}
+            <span className="w-12 h-[1px] bg-white/20" />
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="flex items-center gap-3 mt-6">
-          <Button variant="outline" size="icon" onClick={resetTimer} id="timer-reset-btn">
-            <RotateCcw className="h-4 w-4" />
-          </Button>
-          <motion.button
-            whileTap={{ scale: 0.94 }}
-            onClick={isRunning ? pauseTimer : startTimer}
-            className={cn(
-              "flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br shadow-lg text-white",
-              color
-            )}
-            id="timer-toggle-btn"
+        {/* Timer Controls */}
+        <div className="flex items-center gap-6">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={resetTimer}
+            className="h-14 w-14 rounded-full text-white hover:bg-white/20 border border-white/20 backdrop-blur-md"
           >
-            <AnimatePresence mode="wait">
-              {isRunning ? (
-                <motion.div key="pause" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
-                  <Pause className="h-6 w-6" />
-                </motion.div>
-              ) : (
-                <motion.div key="play" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
-                  <Play className="h-6 w-6 ml-0.5" />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.button>
-          <Button variant="outline" size="icon" onClick={() => setSettingsOpen(true)} id="timer-settings-btn">
-            <Settings className="h-4 w-4" />
+            <RotateCcw className="h-6 w-6" />
+          </Button>
+          
+          <Button
+            onClick={isRunning ? pauseTimer : startTimer}
+            className="h-20 w-48 rounded-full bg-white text-black hover:bg-white/90 hover:scale-105 transition-all shadow-[0_0_40px_rgba(255,255,255,0.3)] text-xl font-bold uppercase tracking-wider"
+          >
+            {isRunning ? (
+              <><Pause className="h-6 w-6 mr-3" /> Pause</>
+            ) : (
+              <><Play className="h-6 w-6 mr-3 ml-1" /> Start</>
+            )}
           </Button>
         </div>
       </div>
 
-      {/* Today stats */}
-      <div className="grid grid-cols-3 gap-4">
-        {[
-          { label: "Sessions", value: todayFocusSessions.length, icon: CheckCircle, color: "text-[var(--primary)]" },
-          { label: "Focus Time", value: `${todayFocusSessions.length * settings.focusDuration}m`, icon: Clock, color: "text-orange-500" },
-          { label: "All Time", value: sessions.filter((s) => s.mode === "focus").length, icon: Brain, color: "text-[var(--accent)]" },
-        ].map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.label}>
-              <CardContent className="p-4 text-center">
-                <Icon className={cn("h-5 w-5 mx-auto mb-2", stat.color)} />
-                <p className="text-xl font-bold">{stat.value}</p>
-                <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{stat.label}</p>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      {/* Footer Music Controls & Stats snippet */}
+      <div className="absolute overflow-y-auto max-h-[80vh] hide-scrollbar inset-x-6 bottom-6 flex flex-col lg:flex-row items-end lg:items-center justify-between gap-6 pb-[env(safe-area-inset-bottom)] pointer-events-none">
+        {/* Left side: Quick Stats (hidden on very small screens) */}
+        <div className="hidden lg:flex items-center gap-4 pointer-events-auto">
+          <div className="flex flex-col bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-3 text-white shadow-2xl min-w-[120px]">
+            <span className="text-white/60 text-[10px] uppercase font-bold tracking-widest mb-1 flex items-center gap-1.5"><CheckCircle className="w-3 h-3"/> Sessions Today</span>
+            <span className="text-2xl font-bold">{todayFocusSessions.length}</span>
+          </div>
+          <div className="flex flex-col bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-3 text-white shadow-2xl min-w-[120px]">
+            <span className="text-white/60 text-[10px] uppercase font-bold tracking-widest mb-1 flex items-center gap-1.5"><Clock className="w-3 h-3"/> Total Time</span>
+            <span className="text-2xl font-bold">{todayFocusSessions.length * settings.focusDuration}m</span>
+          </div>
+        </div>
 
-      {/* Recent sessions */}
-      {sessions.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Recent Sessions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {sessions.slice(0, 5).map((session) => (
-              <div key={session.id} className="flex items-center gap-3 text-sm">
-                <div
-                  className={cn(
-                    "h-2 w-2 rounded-full shrink-0",
-                    session.mode === "focus"
-                      ? "bg-[var(--primary)]"
-                      : session.mode === "short_break"
-                      ? "bg-emerald-500"
-                      : "bg-orange-500"
-                  )}
-                />
-                <span className="flex-1 capitalize">{session.mode.replace("_", " ")}</span>
-                <span className="text-[var(--muted-foreground)]">{session.duration}m</span>
-                <span className="text-xs text-[var(--muted-foreground)]">
-                  {session.completedAt
-                    ? new Date(session.completedAt).toLocaleTimeString("en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : "—"}
-                </span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+        {/* Right / Bottom Center: Music Controls */}
+        <div className="pointer-events-auto w-full lg:w-auto flex justify-center">
+          <MusicControls onOpenPlaylist={() => setPlaylistOpen(true)} />
+        </div>
+      </div>
 
       {/* Settings Dialog */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent>
+        <DialogContent aria-describedby={undefined} className="bg-[#111] border-white/10 text-white">
           <DialogHeader>
-            <DialogTitle>Focus Settings</DialogTitle>
+            <DialogTitle className="text-white">Focus Settings</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            {[
-              { label: "Focus Duration (minutes)", key: "focusDuration" },
-              { label: "Short Break (minutes)", key: "shortBreakDuration" },
-              { label: "Long Break (minutes)", key: "longBreakDuration" },
-              { label: "Sessions before long break", key: "sessionsBeforeLongBreak" },
-            ].map(({ label, key }) => (
-              <Input
-                key={key}
-                label={label}
-                type="number"
-                min={1}
-                max={120}
-                value={(settingsForm as unknown as Record<string, number>)[key]}
-                onChange={(e) =>
-                  setSettingsForm((f) => ({ ...f, [key]: parseInt(e.target.value) || 1 }))
-                }
-                id={`settings-${key}`}
-              />
-            ))}
-            <div className="flex items-center gap-2">
+          <div className="space-y-5 pt-4">
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { label: "Focus (min)", key: "focusDuration" },
+                { label: "Short Break (min)", key: "shortBreakDuration" },
+                { label: "Long Break (min)", key: "longBreakDuration" },
+                { label: "Sessions to Long Break", key: "sessionsBeforeLongBreak" },
+              ].map(({ label, key }) => (
+                <div key={key} className="space-y-1.5">
+                  <label className="text-xs font-semibold text-white/50 uppercase tracking-widest">{label}</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={120}
+                    value={(settingsForm as unknown as Record<string, number>)[key]}
+                    onChange={(e) =>
+                      setSettingsForm((f) => ({ ...f, [key]: parseInt(e.target.value) || 1 }))
+                    }
+                    className="bg-white/5 border-white/10 text-white font-mono"
+                  />
+                </div>
+              ))}
+            </div>
+            
+            <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
+              <span className="text-sm font-semibold">Auto-start breaks</span>
               <input
                 type="checkbox"
-                id="auto-break"
                 checked={settingsForm.autoStartBreaks}
                 onChange={(e) => setSettingsForm((f) => ({ ...f, autoStartBreaks: e.target.checked }))}
-                className="rounded"
+                className="w-5 h-5 rounded border-white/20 bg-transparent text-[var(--primary)] focus:ring-[var(--primary)] focus:ring-offset-black"
               />
-              <label htmlFor="auto-break" className="text-sm cursor-pointer">Auto-start breaks</label>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSettingsOpen(false)}>Cancel</Button>
-            <Button onClick={() => { updateSettings(settingsForm); setSettingsOpen(false); }}>
+          <DialogFooter className="mt-6 border-t border-white/10 pt-4">
+            <Button variant="ghost" className="text-white/70 hover:text-white" onClick={() => setSettingsOpen(false)}>Cancel</Button>
+            <Button className="bg-white text-black hover:bg-white/90 font-bold" onClick={() => { updateSettings(settingsForm); setSettingsOpen(false); }}>
               Save Settings
             </Button>
           </DialogFooter>

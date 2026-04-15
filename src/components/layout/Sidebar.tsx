@@ -17,11 +17,17 @@ import {
   X,
   Bot,
   Wind,
+  Target,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/store/uiStore";
 import { useTodoStore } from "@/store/todoStore";
+import { useAuthStore } from "@/store/authStore";
+import { useHabitsStore } from "@/store/habitsStore";
+import { useFocusStore } from "@/store/focusStore";
 import { useRealTimeClock } from "@/hooks/useRealTimeClock";
+import { isSameDay, parseISO } from "date-fns";
 import { useWeather } from "@/hooks/useWeather";
 import { useT } from "@/hooks/useT";
 import * as AvatarPrimitive from "@radix-ui/react-avatar";
@@ -185,10 +191,19 @@ export function Sidebar() {
   );
   const clock = useRealTimeClock();
   const { t } = useT();
+  const { user, logout } = useAuthStore();
+  const { habits, logs } = useHabitsStore();
+
+  const today = new Date().toISOString().split("T")[0];
+  const pendingHabits = habits.length - logs.filter(l => 
+    isSameDay(parseISO(l.date), parseISO(today)) && l.completed
+  ).length;
 
   const navItems = [
     { label: t("sidebar.dashboard"), href: "/dashboard", icon: LayoutDashboard },
     { label: t("sidebar.todo"),      href: "/todo",      icon: CheckSquare },
+    { label: t("sidebar.goals"),     href: "/goals",     icon: Target },
+    { label: t("sidebar.habits"),    href: "/habits",    icon: Sparkles },
     { label: t("sidebar.finance"),   href: "/finance",   icon: DollarSign },
     { label: t("sidebar.calendar"),  href: "/calendar",  icon: Calendar },
     { label: t("sidebar.focus"),     href: "/focus",     icon: Timer },
@@ -197,6 +212,10 @@ export function Sidebar() {
   ];
 
   const onNavClick = () => setSidebarOpen(false);
+  const isAuthPage = pathname === "/login" || pathname === "/register";
+  const { isFullscreen } = useFocusStore();
+
+  if (isAuthPage || isFullscreen) return null;
 
   return (
     <>
@@ -346,11 +365,15 @@ export function Sidebar() {
               <NavItem
                 key={item.href}
                 {...item}
-                badge={item.href === "/todo" ? pendingTodos : undefined}
-                collapsed={sidebarCollapsed}
-                active={active}
-                onClick={onNavClick}
-              />
+            badge={
+              item.href === "/todo" ? pendingTodos : 
+              item.href === "/habits" ? (pendingHabits > 0 ? pendingHabits : undefined) : 
+              undefined
+            }
+            collapsed={sidebarCollapsed}
+            active={active}
+            onClick={onNavClick}
+          />
             );
           })}
         </nav>
@@ -366,9 +389,9 @@ export function Sidebar() {
             title={sidebarCollapsed ? "John Doe" : undefined}
           >
             <AvatarPrimitive.Root className="h-7 w-7 shrink-0 overflow-hidden rounded-full ring-2 ring-[var(--primary)]/25">
-              <AvatarPrimitive.Image src="" alt="User" />
+              <AvatarPrimitive.Image src={user?.avatar || ""} alt="User" />
               <AvatarPrimitive.Fallback className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white text-[10px] font-bold">
-                JD
+                {user?.name?.slice(0, 2).toUpperCase() || "JD"}
               </AvatarPrimitive.Fallback>
             </AvatarPrimitive.Root>
             <AnimatePresence initial={false}>
@@ -380,10 +403,10 @@ export function Sidebar() {
                   className="overflow-hidden whitespace-nowrap"
                 >
                   <p className="text-sm font-semibold text-[var(--foreground)] leading-none">
-                    John Doe
+                    {user?.name || "John Doe"}
                   </p>
                   <p className="text-[10px] text-[var(--muted-foreground)] mt-0.5">
-                    john@example.com
+                    {user?.email || "john@example.com"}
                   </p>
                 </motion.div>
               )}
@@ -408,6 +431,10 @@ export function Sidebar() {
               "flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all text-[var(--muted-foreground)] hover:bg-red-500/10 hover:text-red-500",
               sidebarCollapsed && "justify-center px-2"
             )}
+            onClick={() => {
+              logout();
+              onNavClick();
+            }}
             title={sidebarCollapsed ? t("sidebar.signOut") : undefined}
           >
             <LogOut style={{ width: 17, height: 17 }} className="shrink-0" />

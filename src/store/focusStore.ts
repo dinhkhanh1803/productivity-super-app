@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { generateId } from "@/lib/utils";
-import type { FocusMode, FocusSession, FocusSettings } from "@/types";
+import type { FocusMode, FocusSession, FocusSettings, Track, FocusBackground } from "@/types";
 
 interface FocusState {
   settings: FocusSettings;
@@ -11,6 +11,15 @@ interface FocusState {
   isRunning: boolean;
   sessionCount: number; // completed focus sessions this cycle
 
+  // New states
+  isPlayingTrack: boolean;
+  currentTrack: Track | null;
+  playlist: Track[];
+  volume: number;
+  background: FocusBackground;
+  isFullscreen: boolean;
+
+
   startTimer: () => void;
   pauseTimer: () => void;
   resetTimer: () => void;
@@ -18,6 +27,18 @@ interface FocusState {
   switchMode: (mode: FocusMode) => void;
   completeSession: () => void;
   updateSettings: (s: Partial<FocusSettings>) => void;
+
+  // New actions
+  setTrack: (track: Track | null) => void;
+  togglePlayback: () => void;
+  setIsPlayingTrack: (isPlaying: boolean) => void;
+  setVolume: (vol: number) => void;
+  nextTrack: () => void;
+  prevTrack: () => void;
+  addTrack: (track: Track) => void;
+  removeTrack: (trackId: string) => void;
+  setBackground: (bg: FocusBackground) => void;
+  toggleFullscreen: (force?: boolean) => void;
 }
 
 const defaultSettings: FocusSettings = {
@@ -52,6 +73,16 @@ export const useFocusStore = create<FocusState>()(
       timeLeft: defaultSettings.focusDuration * 60,
       isRunning: false,
       sessionCount: 0,
+
+      isPlayingTrack: false,
+      currentTrack: null,
+      playlist: [
+        { id: "preset-lofi-1", title: "Lofi Study Girl", type: "preset", url: "https://r.mkhairi.com/lofi" }
+      ],
+      volume: 50,
+      background: { type: "color", url: "var(--background)" },
+      isFullscreen: false,
+
 
       startTimer: () => set({ isRunning: true }),
       pauseTimer: () => set({ isRunning: false }),
@@ -121,7 +152,72 @@ export const useFocusStore = create<FocusState>()(
           };
         });
       },
+
+      setTrack: (track) => set({ currentTrack: track, isPlayingTrack: !!track }),
+      togglePlayback: () => set((state) => {
+        if (!state.currentTrack) {
+          if (!state.playlist.length) return {};
+          return {
+            currentTrack: state.playlist[0],
+            isPlayingTrack: true,
+          };
+        }
+
+        return { isPlayingTrack: !state.isPlayingTrack };
+      }),
+      setIsPlayingTrack: (isPlayingTrack) => set({ isPlayingTrack }),
+      setVolume: (volume) => set({ volume }),
+      
+      nextTrack: () => set((state) => {
+        if (!state.playlist.length) return {};
+        if (!state.currentTrack) return { currentTrack: state.playlist[0] };
+        const idx = state.playlist.findIndex((t) => t.id === state.currentTrack?.id);
+        const nextIdx = (idx + 1) % state.playlist.length;
+        return { currentTrack: state.playlist[nextIdx] };
+      }),
+      
+      prevTrack: () => set((state) => {
+        if (!state.playlist.length) return {};
+        if (!state.currentTrack) return { currentTrack: state.playlist[0] };
+        const idx = state.playlist.findIndex((t) => t.id === state.currentTrack?.id);
+        const prevIdx = idx <= 0 ? state.playlist.length - 1 : idx - 1;
+        return { currentTrack: state.playlist[prevIdx] };
+      }),
+
+      addTrack: (track) => set((state) => {
+        const exists = state.playlist.some((t) => t.id === track.id);
+        if (exists) return {};
+        return { playlist: [track, ...state.playlist] };
+      }),
+
+      removeTrack: (trackId) => set((state) => ({
+        playlist: state.playlist.filter((t) => t.id !== trackId),
+        currentTrack: state.currentTrack?.id === trackId ? null : state.currentTrack
+      })),
+
+      setBackground: (background) => set({ background }),
+      
+      toggleFullscreen: (force) => set((state) => ({
+        isFullscreen: force !== undefined ? force : !state.isFullscreen
+      })),
     }),
-    { name: "psa-focus", partialize: (s) => ({ settings: s.settings, sessions: s.sessions, sessionCount: s.sessionCount }) }
+    {
+      name: "psa-focus",
+      partialize: (s) => {
+        const persistedPlaylist = s.playlist.filter((track) => track.type !== "local");
+        const persistedCurrentTrack =
+          s.currentTrack?.type === "local" ? null : s.currentTrack;
+
+        return {
+          settings: s.settings,
+          sessions: s.sessions,
+          sessionCount: s.sessionCount,
+          playlist: persistedPlaylist,
+          background: s.background,
+          volume: s.volume,
+          currentTrack: persistedCurrentTrack,
+        };
+      }
+    }
   )
 );

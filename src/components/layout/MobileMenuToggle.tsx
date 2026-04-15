@@ -3,6 +3,7 @@
 import { Menu } from "lucide-react";
 import { useUIStore } from "@/store/uiStore";
 import { usePathname } from "next/navigation";
+import { useFocusStore } from "@/store/focusStore";
 
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -12,6 +13,8 @@ const PAGE_TITLES: Record<string, string> = {
   "/focus": "Focus",
   "/notes": "Notes",
   "/settings": "Settings",
+  "/goals": "Goals",
+  "/habits": "Habits",
 };
 
 /**
@@ -22,7 +25,11 @@ const PAGE_TITLES: Record<string, string> = {
 export function MobileMenuToggle() {
   const { setSidebarOpen } = useUIStore();
   const pathname = usePathname();
+  const isAuthPage = pathname === "/login" || pathname === "/register";
+  const { isFullscreen } = useFocusStore();
   const title = PAGE_TITLES[pathname] ?? "Productivity";
+
+  if (isAuthPage || isFullscreen) return null;
 
   return (
     <div className="flex h-14 shrink-0 items-center gap-3 border-b border-[var(--border)] bg-[var(--background)] px-4 lg:hidden">
