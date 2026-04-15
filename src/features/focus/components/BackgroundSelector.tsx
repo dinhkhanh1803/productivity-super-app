@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useFocusStore } from "@/store/focusStore";
 import { BackgroundType } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -20,14 +22,64 @@ interface BackgroundSelectorProps {
 const PRESET_BACKGROUNDS = [
   { id: "color-dark", label: "Dark Mode", type: "color" as const, url: "#09090b", thumb: "#09090b" },
   { id: "color-accent", label: "Accent", type: "color" as const, url: "var(--primary)", thumb: "#3b82f6" },
-  { id: "img-nature", label: "Forest", type: "image" as const, url: "https://images.unsplash.com/photo-1448375240586-882707db888b?q=80&w=2070&auto=format&fit=crop", thumb: "https://images.unsplash.com/photo-1448375240586-882707db888b?q=80&w=400&auto=format&fit=crop" },
-  { id: "img-lofi", label: "Lofi Room", type: "image" as const, url: "https://images.unsplash.com/photo-1554556488-cb94bc874839?q=80&w=2070&auto=format&fit=crop", thumb: "https://images.unsplash.com/photo-1554556488-cb94bc874839?q=80&w=400&auto=format&fit=crop" },
-  { id: "vid-rain", label: "Rainy Window", type: "video" as const, url: "https://cdn.pixabay.com/video/2016/11/14/6362-191410754_large.mp4", thumb: "https://cdn.pixabay.com/video/2016/11/14/6362-191410754_large.mp4#t=0.1" },
-  { id: "vid-abstract", label: "Abstract Loop", type: "video" as const, url: "https://cdn.pixabay.com/video/2021/08/04/83864-584743202_large.mp4", thumb: "https://cdn.pixabay.com/video/2021/08/04/83864-584743202_large.mp4#t=0.1" },
 ];
+
+type RemoteBackground = {
+  id: string;
+  label: string;
+  type: Exclude<BackgroundType, "color">;
+  url: string;
+  thumb: string;
+};
 
 export function BackgroundSelector({ open, onOpenChange }: BackgroundSelectorProps) {
   const { background, setBackground } = useFocusStore();
+  const [remoteBackgrounds, setRemoteBackgrounds] = useState<RemoteBackground[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open || remoteBackgrounds.length > 0) return;
+
+    let cancelled = false;
+
+    async function loadBackgrounds() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/pixabay/backgrounds");
+        const data = (await response.json()) as {
+          backgrounds?: RemoteBackground[];
+          error?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load Pixabay backgrounds");
+        }
+
+        if (!cancelled) {
+          setRemoteBackgrounds(data.backgrounds || []);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load Pixabay backgrounds");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadBackgrounds();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, remoteBackgrounds.length]);
+
+  const backgrounds = [...PRESET_BACKGROUNDS, ...remoteBackgrounds];
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -63,7 +115,7 @@ export function BackgroundSelector({ open, onOpenChange }: BackgroundSelectorPro
           <div className="space-y-3">
             <span className="text-xs font-semibold text-white/50 uppercase tracking-widest">Presets</span>
             <div className="grid grid-cols-2 gap-3">
-              {PRESET_BACKGROUNDS.map((preset) => {
+              {backgrounds.map((preset) => {
                 const isActive = background.url === preset.url;
                 
                 return (
@@ -79,10 +131,10 @@ export function BackgroundSelector({ open, onOpenChange }: BackgroundSelectorPro
                       <div className="absolute inset-0" style={{ background: preset.thumb }} />
                     )}
                     {preset.type === "image" && (
-                      <img src={preset.thumb} alt={preset.label} className="absolute inset-0 h-full w-full object-cover" />
+                      <Image src={preset.thumb} alt={preset.label} fill className="absolute inset-0 h-full w-full object-cover" sizes="(max-width: 640px) 50vw, 200px" />
                     )}
                     {preset.type === "video" && (
-                      <video src={preset.thumb} className="absolute inset-0 h-full w-full object-cover" />
+                      <Image src={preset.thumb} alt={preset.label} fill className="absolute inset-0 h-full w-full object-cover" sizes="(max-width: 640px) 50vw, 200px" />
                     )}
                     
                     <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
@@ -103,6 +155,12 @@ export function BackgroundSelector({ open, onOpenChange }: BackgroundSelectorPro
                 );
               })}
             </div>
+            {loading && (
+              <p className="text-xs text-white/40">Loading Pixabay backgrounds...</p>
+            )}
+            {error && (
+              <p className="text-xs text-red-300/80">{error}</p>
+            )}
           </div>
         </div>
       </DialogContent>
