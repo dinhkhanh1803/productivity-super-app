@@ -21,7 +21,8 @@ import { useTodoStore } from "@/store/todoStore";
 import { useFinanceStore } from "@/store/financeStore";
 import { useFocusStore } from "@/store/focusStore";
 import { useT } from "@/hooks/useT";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getCurrencyLocale } from "@/lib/utils";
+import { useI18nStore } from "@/store/i18nStore";
 import { GoalsWidget } from "./GoalsWidget";
 import { HabitsWidget } from "./HabitsWidget";
 
@@ -134,6 +135,7 @@ function StartStudyingCard() {
 /* ─── Finance card ──────────────────────────────────────── */
 function FinanceCard() {
   const { getTotalIncome, getTotalExpense } = useFinanceStore();
+  const currency = useI18nStore((s) => s.currency);
   const { t } = useT();
   const month = new Date().toISOString().slice(0, 7);
   const income = getTotalIncome(month);
@@ -164,7 +166,7 @@ function FinanceCard() {
           <div>
             <p className="text-xs text-[var(--muted-foreground)]">{t("dashboard.monthlyBalance")}</p>
             <p className={`text-2xl font-bold ${balance >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-              {formatCurrency(balance)}
+              {formatCurrency(balance, currency, getCurrencyLocale(currency))}
             </p>
           </div>
           <div className="flex items-end gap-1 h-10">
@@ -183,16 +185,16 @@ function FinanceCard() {
             <div className="flex-1 rounded-lg bg-emerald-500/10 px-2.5 py-1.5">
               <div className="flex items-center gap-1 mb-0.5">
                 <TrendingUp className="h-3 w-3 text-emerald-500" />
-                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Income</span>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">{t("finance.income")}</span>
               </div>
-              <p className="text-xs font-bold">{formatCurrency(income)}</p>
+              <p className="text-xs font-bold">{formatCurrency(income, currency, getCurrencyLocale(currency))}</p>
             </div>
             <div className="flex-1 rounded-lg bg-red-500/10 px-2.5 py-1.5">
               <div className="flex items-center gap-1 mb-0.5">
                 <TrendingDown className="h-3 w-3 text-red-500" />
-                <span className="text-[10px] text-red-500 font-medium">Expense</span>
+                <span className="text-[10px] text-red-500 font-medium">{t("finance.expense")}</span>
               </div>
-              <p className="text-xs font-bold">{formatCurrency(expense)}</p>
+              <p className="text-xs font-bold">{formatCurrency(expense, currency, getCurrencyLocale(currency))}</p>
             </div>
           </div>
           <div>

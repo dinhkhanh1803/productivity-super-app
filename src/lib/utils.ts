@@ -13,8 +13,30 @@ export function formatCurrency(
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
-    minimumFractionDigits: 2,
+    minimumFractionDigits: currency === "VND" || currency === "JPY" ? 0 : 2,
+    maximumFractionDigits: currency === "VND" || currency === "JPY" ? 0 : 2,
   }).format(amount);
+}
+
+export function getCurrencyLocale(currency: string): string {
+  if (currency === "VND") return "vi-VN";
+  if (currency === "EUR") return "de-DE";
+  if (currency === "JPY") return "ja-JP";
+  return "en-US";
+}
+
+export function formatCompactCurrencyValue(amount: number): string {
+  const abs = Math.abs(amount);
+  const sign = amount < 0 ? "-" : "";
+
+  if (abs >= 1_000_000_000) return `${sign}${trimCompact(abs / 1_000_000_000)}B`;
+  if (abs >= 1_000_000) return `${sign}${trimCompact(abs / 1_000_000)}M`;
+  if (abs >= 1_000) return `${sign}${trimCompact(abs / 1_000)}K`;
+  return `${amount}`;
+}
+
+function trimCompact(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, "");
 }
 
 export function formatRelativeDate(date: Date | string): string {

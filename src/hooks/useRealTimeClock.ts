@@ -10,7 +10,12 @@ export interface ClockState {
 }
 
 export function useRealTimeClock(): ClockState {
-  const [now, setNow] = useState<ClockState>(() => formatDate(new Date()));
+  const [now, setNow] = useState<ClockState>({
+    dayOfWeek: "",
+    date: "",
+    time: "00:00:00",
+    hours: 0,
+  });
 
   useEffect(() => {
     const id = setInterval(() => setNow(formatDate(new Date())), 1000);

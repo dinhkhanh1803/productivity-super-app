@@ -23,6 +23,8 @@ const todayScheduleData: ScheduleItem[] = [
   { id: "2", time: "10:30", title: "Design landing page",  type: "task",                        colorClass: "bg-[var(--primary)]" },
   { id: "3", time: "14:00", title: "Design Review",        type: "event", location: "Room A",   colorClass: "bg-purple-500" },
   { id: "4", time: "16:00", title: "Review financial Q2",  type: "task",                        colorClass: "bg-amber-500" },
+  { id: "4", time: "16:00", title: "Review financial Q2",  type: "task",                        colorClass: "bg-amber-500" },
+  { id: "4", time: "16:00", title: "Review financial Q2",  type: "task",                        colorClass: "bg-amber-500" },
 ];
 
 const tomorrowScheduleData: ScheduleItem[] = [
@@ -55,39 +57,51 @@ function ScheduleCard({
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.35 }}
+      className="h-full"
     >
-      <Card3D>
-        <Card className="h-full rounded-2xl shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-bold">{title}</CardTitle>
+      <Card3D className="h-full">
+        <Card className="flex h-full flex-col rounded-2xl shadow-sm">
+          <CardHeader className="flex-row items-start justify-between gap-3 space-y-0 pb-3">
+            <CardTitle className="min-w-0 text-lg font-bold leading-snug">{title}</CardTitle>
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="h-8 shrink-0 gap-1.5 rounded-xl px-2.5 text-sm font-semibold text-[var(--primary)] hover:bg-[var(--primary)]/10"
+            >
+              <Link href="/calendar">
+                {t("schedule.viewDetails")}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
           </CardHeader>
-          <CardContent className="pb-4">
+          <CardContent className="flex flex-1 flex-col pb-4">
             {isEmpty ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
+              <div className="flex flex-1 flex-col items-center justify-center gap-2 py-8 text-center">
                 <span className="text-3xl">{emptyMsg.includes("free") || emptyMsg.includes("rảnh") ? "🌿" : "🌟"}</span>
-                <p className="text-sm text-[var(--muted-foreground)] font-medium">{emptyMsg}</p>
+                <p className="text-base font-medium text-[var(--muted-foreground)]">{emptyMsg}</p>
               </div>
             ) : (
-              <div className="space-y-1">
+              <div className="max-h-[25rem] space-y-2 overflow-y-auto pr-1">
                 {items.map((item) => (
                   <div
                     key={item.id}
-                    className="group flex items-start gap-3 rounded-xl p-2.5 hover:bg-[var(--muted)] transition-colors duration-150"
+                    className="group flex min-h-[4.5rem] items-start gap-3 rounded-xl p-3 transition-colors duration-150 hover:bg-[var(--muted)]"
                   >
                     <div className="flex flex-col items-center pt-1 shrink-0 gap-0.5">
-                      <span className={`h-2 w-2 rounded-full shrink-0 ${item.colorClass}`} />
+                      <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${item.colorClass}`} />
                       {items.indexOf(item) < items.length - 1 && (
                         <span className="w-px flex-1 bg-[var(--border)] min-h-4" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0 -mt-0.5">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <p className="text-sm font-semibold text-[var(--foreground)] truncate">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-base font-semibold leading-snug text-[var(--foreground)]">
                           {item.title}
                         </p>
                         <span
                           className={cn(
-                            "rounded-full px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide shrink-0",
+                            "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
                             item.type === "event"
                               ? "bg-blue-500/15 text-blue-600 dark:text-blue-400"
                               : "bg-[var(--primary)]/15 text-[var(--primary)]"
@@ -96,14 +110,14 @@ function ScheduleCard({
                           {t(`schedule.${item.type}`)}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <span className="flex items-center gap-0.5 text-[11px] text-[var(--muted-foreground)]">
-                          <Clock className="h-2.5 w-2.5" />
+                      <div className="mt-1 flex flex-wrap items-center gap-3">
+                        <span className="flex items-center gap-1 text-sm text-[var(--muted-foreground)]">
+                          <Clock className="h-3.5 w-3.5" />
                           {item.time}
                         </span>
                         {item.location && (
-                          <span className="flex items-center gap-0.5 text-[11px] text-[var(--muted-foreground)]">
-                            <MapPin className="h-2.5 w-2.5" />
+                          <span className="flex items-center gap-1 text-sm text-[var(--muted-foreground)]">
+                            <MapPin className="h-3.5 w-3.5" />
                             {item.location}
                           </span>
                         )}
@@ -113,17 +127,6 @@ function ScheduleCard({
                 ))}
               </div>
             )}
-
-            <Link href="/calendar" className="block mt-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-between text-[var(--primary)] hover:bg-[var(--primary)]/10 rounded-xl text-xs"
-              >
-                {t("schedule.viewDetails")}
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            </Link>
           </CardContent>
         </Card>
       </Card3D>
@@ -138,7 +141,7 @@ function cn(...args: (string | boolean | undefined | null)[]): string {
 
 export function ScheduleSection() {
   const { t, lang } = useT();
-  const clock = useRealTimeClock();
+  useRealTimeClock();
 
   const now = new Date();
   const tomorrow = new Date(now);

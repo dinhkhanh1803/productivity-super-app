@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Sun, Moon, Monitor, Bell, User, Palette, Languages } from "lucide-react";
+import { Sun, Moon, Monitor, Bell, User, Palette, Languages, Coins } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useUIStore } from "@/store/uiStore";
@@ -9,10 +9,11 @@ import { useI18nStore } from "@/store/i18nStore";
 import { useT } from "@/hooks/useT";
 import { cn } from "@/lib/utils";
 import type { Language } from "@/lib/i18n/translations";
+import type { CurrencyCode } from "@/store/i18nStore";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useUIStore();
-  const { lang, setLang } = useI18nStore();
+  const { lang, setLang, currency, setCurrency } = useI18nStore();
   const { t } = useT();
 
   const CARD_DELAY = 0.07;
@@ -118,6 +119,60 @@ export default function SettingsPage() {
               <span className="ml-auto rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
                 Active
               </span>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Currency */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: CARD_DELAY * 1.5 }}
+      >
+        <Card className="rounded-2xl shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/12">
+                <Coins className="h-3.5 w-3.5 text-emerald-500" />
+              </div>
+              <CardTitle className="text-sm">{t("settings.currency")}</CardTitle>
+            </div>
+            <CardDescription className="mt-1 text-xs">
+              {t("settings.currencyDesc")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {(
+                [
+                  { value: "VND" as CurrencyCode, label: "VNĐ" },
+                  { value: "USD" as CurrencyCode, label: "USD" },
+                  { value: "EUR" as CurrencyCode, label: "EUR" },
+                  { value: "JPY" as CurrencyCode, label: "JPY" },
+                ] as { value: CurrencyCode; label: string }[]
+              ).map(({ value, label }) => (
+                <button
+                  key={value}
+                  id={`currency-${value}`}
+                  onClick={() => setCurrency(value)}
+                  className={cn(
+                    "flex items-center justify-between rounded-xl border p-3 transition-all text-left",
+                    currency === value
+                      ? "border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]"
+                      : "border-[var(--border)] text-[var(--muted-foreground)] hover:border-[var(--primary)]/40 hover:text-[var(--foreground)]"
+                  )}
+                >
+                  <span className="text-sm font-semibold">{label}</span>
+                  {currency === value && (
+                    <span className="h-2 w-2 rounded-full bg-[var(--primary)]" />
+                  )}
+                </button>
+              ))}
+            </div>
+            <div className="mt-3 rounded-xl bg-[var(--muted)] px-3 py-2 text-xs text-[var(--muted-foreground)]">
+              {t("settings.currentCurrency")}:{" "}
+              <span className="font-semibold text-[var(--foreground)]">{currency}</span>
             </div>
           </CardContent>
         </Card>

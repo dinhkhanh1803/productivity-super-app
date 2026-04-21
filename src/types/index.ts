@@ -21,19 +21,10 @@ export interface Todo extends BaseEntity {
 
 /* ───── Finance ───── */
 export type TransactionType = "income" | "expense";
-export type TransactionCategory =
-  | "salary"
-  | "food"
-  | "transport"
-  | "entertainment"
-  | "health"
-  | "utilities"
-  | "housing"
-  | "savings"
-  | "other";
+export type TransactionCategory = string;
 
 export interface Transaction extends BaseEntity {
-  title: string;
+  title?: string;
   amount: number;
   type: TransactionType;
   category: TransactionCategory;
@@ -41,10 +32,26 @@ export interface Transaction extends BaseEntity {
   note?: string;
 }
 
+export interface MonthlyData {
+  month: number;
+  year: number;
+  totalIncome: number;
+  totalExpense: number;
+  budget: number;
+  transactions: Transaction[];
+}
+
 export interface Budget {
   category: TransactionCategory;
   limit: number;
   spent: number;
+}
+
+export interface SavingGoal extends BaseEntity {
+  title: string;
+  targetAmount: number;
+  currentAmount: number;
+  progress: number;
 }
 
 /* ───── Calendar ───── */
